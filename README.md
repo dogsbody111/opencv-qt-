@@ -1,1 +1,1 @@
-# opencv-qt-
+# opencv-qt实现视频监控系统多摄像头录制功能
