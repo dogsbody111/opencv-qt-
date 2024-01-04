@@ -14,19 +14,23 @@ LIBS += D:\qt5.12.9\opencv\build\lib\libopencv_*.a
 
 
 SOURCES += \
-    camerathread.cpp \
     cameratread.cpp \
+    logviewer.cpp \
     main.cpp \
+    recording.cpp \
     search.cpp \
     widget.cpp
 
 HEADERS += \
-    camerathread.h \
     cameratread.h \
+    logviewer.h \
+    recording.h \
     search.h \
     widget.h
 
 FORMS += \
+    logviewer.ui \
+    recording.ui \
     search.ui \
     widget.ui
 

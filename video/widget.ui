@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>992</width>
+    <height>597</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>200</x>
-     <y>60</y>
-     <width>421</width>
-     <height>371</height>
+     <y>100</y>
+     <width>511</width>
+     <height>451</height>
     </rect>
    </property>
    <property name="currentIndex">
@@ -29,29 +29,16 @@
     <attribute name="title">
      <string>视频录制</string>
     </attribute>
-    <widget class="QRadioButton" name="radioButton">
+    <widget class="QWidget" name="gridLayoutWidget">
      <property name="geometry">
       <rect>
-       <x>280</x>
-       <y>30</y>
-       <width>91</width>
-       <height>18</height>
+       <x>9</x>
+       <y>9</y>
+       <width>491</width>
+       <height>411</height>
       </rect>
      </property>
-     <property name="text">
-      <string>开始录制</string>
-     </property>
-    </widget>
-    <widget class="QWidget" name="layoutWidget">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>10</y>
-       <width>201</width>
-       <height>221</height>
-      </rect>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout"/>
+     <layout class="QGridLayout" name="gridLayout"/>
     </widget>
    </widget>
    <widget class="QWidget" name="tab_2">
@@ -63,8 +50,8 @@
       <rect>
        <x>0</x>
        <y>0</y>
-       <width>101</width>
-       <height>81</height>
+       <width>501</width>
+       <height>411</height>
       </rect>
      </property>
      <property name="frameShape">
@@ -83,7 +70,7 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>70</y>
+     <y>100</y>
      <width>172</width>
      <height>361</height>
     </rect>
@@ -200,7 +187,7 @@ background-image: url(:/myImage/images/shuiping.png);</string>
       <string>获取附近可用摄像头</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="label_1">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -223,12 +210,41 @@ background-image: url(:/myImage/images/shuiping.png);</string>
       </rect>
      </property>
     </widget>
+    <widget class="QRadioButton" name="radioButton">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>240</y>
+       <width>91</width>
+       <height>18</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>开始录制</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="open_4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>180</y>
+       <width>151</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
+     <property name="text">
+      <string>日志</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_2">
    <property name="geometry">
     <rect>
-     <x>620</x>
+     <x>710</x>
      <y>80</y>
      <width>172</width>
      <height>351</height>
@@ -295,6 +311,22 @@ background-image: url(:/myImage/images/shuiping.png);</string>
      <width>194</width>
      <height>22</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labell">
+   <property name="geometry">
+    <rect>
+     <x>80</x>
+     <y>50</y>
+     <width>531</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>

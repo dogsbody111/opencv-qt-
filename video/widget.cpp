@@ -1,117 +1,136 @@
 #include "widget.h"
 #include "ui_widget.h"
-
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
 {
     ui->setupUi(this);
-
-
-    //获取可用摄像头设备列表
-    cameras = QCameraInfo::availableCameras();
-
-    for (int i = 0; i < cameras.size(); ++i) {
-        qDebug() << "可用摄像头个数："<<cameras.size() <<"name:"<< cameras.at(i).description();
-        // 创建一个新的 QLabel 用于显示摄像头画面
-        QLabel* label = new QLabel(this);
-        label->setObjectName("cameraLabel" + QString::number(i));
-         label->setFixedSize(300, 200);
-         //间距
-         ui->verticalLayout->setSpacing(10);
-        labels.append(label);
-
-        ui->verticalLayout->addWidget(label);
-
-        QCamera *camera = new QCamera(cameras.at(i));
-        cameraList.append(camera);
-
-        QCameraViewfinder *viewfinder = new QCameraViewfinder(this);
-        viewfinderList.append(viewfinder);
-
-        //设置 摄像头画面的显示位置
-        // 将 QCameraViewfinder 添加到垂直布局中
-        ui->verticalLayout->addWidget(viewfinder);
-
-        // 设置 QCameraViewfinder 为 QLabel 的子部件
-        label->setParent(viewfinder);
-
-        if (labels.size() != viewfinderList.size()) {
-            qDebug() << " labels and viewfinderList sizes 不相同!";
-            return;  // 或者进行其他处理，例如抛出异常
-        }
-        //ui->verticalLayout->addWidget(viewfinder);
-
-        // 设置摄像头的视图为 QCameraViewfinder
-        camera->setViewfinder(viewfinder);
-
-
-        //捕获摄像头图像
-        QCameraImageCapture *imageCapture = new QCameraImageCapture(camera);
-        imageCaptureList.append(imageCapture);
-
-        connect(imageCapture, &QCameraImageCapture::imageCaptured,
-                this, &Widget::imageCaptured);
-
-    }
-
     // 初始化摄像头打开状态
-    cameraOpened = false;
 
-    // 创建定时器，用于定期更新视频帧
     timer = new QTimer(this);
+    cameraOpened = false;
+    // 获取可用摄像头设备列表
+    cameras = QCameraInfo::availableCameras();
+    connect(timer, &QTimer::timeout,
+            this, &Widget::localTime);
+    // 创建定时器，用于定期更新视频帧
     connect(timer, &QTimer::timeout,
             this, &Widget::updateFrame);
-
+    timer->start(1000);
+    setupLabels();
     // 显示可用摄像头在下拉框中
     for (const QCameraInfo &cameraInfo : cameras) {
         ui->comboBox->addItem(cameraInfo.description());
     }
+
 }
 
 Widget::~Widget()
 {
     delete ui;
 }
+//创建label和viewfinder和camera
+void Widget::setupLabels() {
+    colCount = 2; // 列数
+    currentRow = 0; // 当前行
+    for (int i = 0; i < cameras.size(); i++) {
+        createLabel(i);
+    }
+    for (int i = 0; i < cameras.size(); i++) {
+        createViewfinder(i);
+        createMediaRecorder(i);
+    }
+    if (cameras.size() % colCount != 0) {
+        currentRow++;//行
+    }
+    // 确保更新布局
+    ui->gridLayout->update();
+}
+void Widget::createMediaRecorder(int index)
+{
+    QMediaRecorder *mediaRecorder = new QMediaRecorder(cameraList[index]);
+    mediaRecorderList.append(mediaRecorder);
 
-//数据更新
-void Widget:: updateFrame() {
+    QString fileName = "recording_" + QString::number(index) + ".avi";
+    mediaRecorder->setOutputLocation(
+                QUrl("file:///D:/qt5.12.9/protect/video/luzhi/filename.mp4"));
+
+    connect(mediaRecorder, SIGNAL(error(QMediaRecorder::Error)),
+            this, SLOT(handleError(QMediaRecorder::Error)));
+
+
+}
+// handleError 槽函数的实现
+void Widget::handleError(QMediaRecorder::Error error)
+{
+    qWarning() << "录制遇到出错 " << error;
+}
+void Widget::createLabel(int index) {
+    QLabel* label = new QLabel(this);
+    label->setObjectName("cameraLabel" + QString::number(index));
+    label->setFixedSize(200, 200);
+    label->setStyleSheet("border: 2px solid black; background-color: transparent;");
+    //在ui里放置label
+    ui->gridLayout->addWidget(label, currentRow, index % colCount, 1, 1, Qt::AlignTop);
+    labels.append(label);
+
+    if ((index + 1) % colCount == 0) {
+        currentRow++;
+    }
+}
+
+
+void Widget::createViewfinder(int index) {
+    QLabel* label = labels[index];// 获取相应的标签
+    QCameraViewfinder *viewfinder = new QCameraViewfinder(label);
+    viewfinderList.append(viewfinder);
+
+    //动态分配内存防止越界，越界返回std::out_of_range 异常。
+    QCamera *camera = new QCamera(cameras.at(index));
+    cameraList.append(camera);
+
+    // 将 QCameraViewfinder 显示在 QLabel 上
+    QVBoxLayout *layout = new QVBoxLayout(label);
+
+    layout->addWidget(viewfinder);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    // 设置viewfinder的大小策略为Expanding
+    viewfinder->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    //viewfinder->setFixedSize(label->size());
+
+    camera->setViewfinder(viewfinder);
+
+    QCameraImageCapture *imageCapture = new QCameraImageCapture(camera);
+    imageCaptureList.append(imageCapture);
+
+    if ((index + 1) % colCount == 0) {
+        currentRow++;
+    }
+}
+// 数据更新
+void Widget::updateFrame() {
     if (cameraOpened) {
-        qDebug() << "cameraList size: " << cameraList.size();
-        qDebug() << "viewfinderList size: " << viewfinderList.size();
-        qDebug() << "labels size: " << labels.size();
-
         for (int i = 0; i < cameraList.size(); ++i) {
-            qDebug() << "Processing camera #" << i;
-            if (i < viewfinderList.size() && i < labels.size()) {
+            if (i < viewfinderList.size() && i < cameras.size()) {
                 QCameraViewfinder *viewfinder = viewfinderList[i];
-                if ( viewfinder&&viewfinder->isVisible())
-                {
-                    QImage frame = viewfinder->grab().toImage();
-                    if (!frame.isNull()) {
-                        cv::Mat matFrame = QImageToMat(frame);
-                        if (matFrame.empty()) {
-                            qWarning() << "cv::Mat is empty!";
-                            return;
-                        }
-                        // 转换颜色通道顺序（BGR 到 RGB）
-                        cv::cvtColor(matFrame, matFrame, cv::COLOR_BGR2RGB);
-                        QImage qtImage(matFrame.data, matFrame.cols, matFrame.rows, matFrame.step, QImage::Format_RGB888);
-
-                        // 将 QImage 转换为 QPixmap
-                        QPixmap pixmap = QPixmap::fromImage(qtImage);
-
-                        // 设置 QCameraViewfinder 的大小为 label 的大小
-                        viewfinder->setFixedSize(labels[i]->size());
-                        if (labels[i]) {
-                            // 在对应的标签上显示图像
-                            labels[i]->setPixmap(pixmap.scaled(labels[i]->size(), Qt::KeepAspectRatio));
-                        } else {
-                            qDebug() << "Label没有";
-                        }
-                    }
-                }
-                else {
+                QLabel *label = labels[i];
+                if (viewfinder && viewfinder->isVisible()) {
+                    // 使用信号槽连接，而不是定时器轮询
+                    QCameraImageCapture *imageCapture = imageCaptureList[i];
+                    connect(imageCapture, &QCameraImageCapture::imageCaptured,
+                            this, [this, i](int, const QImage &frame) {
+                        processCapturedImage(i, frame);
+                    });
+                    // 将 QCameraViewfinder 的图像显示到 QLabel 上
+                    qDebug() << "Label size: " << label->size();
+                    // 将 QImage 转换为 QPixmap
+                    QPixmap pixmap(viewfinder->grab());
+                    pixmap = pixmap.scaled(label->size(), Qt::KeepAspectRatio, Qt::FastTransformation);
+                    // 在对应的标签上显示图像
+                    label->setPixmap(pixmap);
+                } else {
                     qDebug() << "Viewfinder is not visible.";
                 }
             } else {
@@ -120,115 +139,22 @@ void Widget:: updateFrame() {
         }
     }
 }
-
-//打开摄像头
-void Widget::on_open_clicked()
-{
-
-    if (!cameraOpened) {
-        int selectedCameraIndex=0;
-        // 获取选择的摄像头索引
-        //int selectedCameraIndex = cameraList.size();
-        // 检查索引是否有效
-        //&& selectedCameraIndex < cameras.size()
-        for( selectedCameraIndex = 0 ;selectedCameraIndex<(cameraList.size());++selectedCameraIndex) {
-
-            cameraList[selectedCameraIndex]->setViewfinder(viewfinderList[selectedCameraIndex]);
-            cameraList[selectedCameraIndex]->start();
-            imageCaptureList[selectedCameraIndex]->setCaptureDestination(QCameraImageCapture::CaptureToBuffer);
-            cameraList[selectedCameraIndex]->setCaptureMode(QCamera::CaptureStillImage);
-            imageCaptureList[selectedCameraIndex]->capture();
-
-            // 连接图像捕获信号
-            connect(imageCaptureList[selectedCameraIndex],SIGNAL(imageCaptured(int,QImage)),
-                    this,SLOT(imageCaptured(int,QImage)));
-            // 开始捕获
-            imageCaptureList[selectedCameraIndex]->capture();
-
-            cameraOpened = true;
-            ui->open->setText("关闭摄像头");
-            timer->start(30); // 每30毫秒更新一帧
+void Widget::processCapturedImage(int index, const QImage &frame) {
+    if (!frame.isNull()) {
+        cv::Mat matFrame = QImageToMat(frame);
+        if (matFrame.empty()) {
+            qWarning() << "cv::Mat 是空!";
+            return;
         }
-        //qDebug() << "无效的摄像头索引";
-    } else {
-        // 关闭摄像头
-        for (int i = 0; i < cameraList.size(); ++i) {
+        // 转换颜色通道顺序（BGR 到 RGB）
+        cv::cvtColor(matFrame, matFrame, cv::COLOR_BGR2RGB);
 
-            cameraList[i]->stop();
-            imageCaptureList[i]->deleteLater();  // 使用 deleteLater() 而不是 delete
-            cameraList[i]->deleteLater();  // 使用 deleteLater() 而不是 delete
+        QImage qtImage(matFrame.data, matFrame.cols, matFrame.rows, matFrame.step, QImage::Format_RGB888);
 
-            cameraList[i]->stop();
-            disconnect(imageCaptureList[i],SIGNAL(imageCaptured(int,QImage)),
-                       this,SLOT(imageCaptured(int,QImage)));
-            // 清理摄像头对象
-            delete cameraList[i];
-            cameraList[i] = nullptr;
-
-            // 清理图像捕获对象
-            delete imageCaptureList[i];
-            imageCaptureList[i] = nullptr;
-
-            // 清理 QCameraViewfinder 对象
-            // 如果 labels[i] 是 QCameraViewfinder 的子部件，也需要删除
-            if (labels[i]) {
-                labels[i]->parent()->deleteLater();  // Assuming QCameraViewfinder is the parent
-            }
-        }
-
-        timer->stop();
-        // 清理列表
-        cameras.clear();
-        cameraList.clear();
-        viewfinderList.clear();
-        imageCaptureList.clear();
-
-        cameraOpened = false;
-        ui->open->setText("打开摄像头");
-    }
-}
-
-void Widget::onCameraSelected(const QCameraInfo &cameraInfo) {
-    if (cameraOpened) {
-        on_open_clicked();
-    }
-
-    startCamera(cameraInfo);
-}
-//搜索对话框的点击事件
-void Widget::on_open_3_clicked()
-{
-    CameraSearchDialog *dialog = new CameraSearchDialog(this);
-    connect(dialog, &CameraSearchDialog::cameraSelected,
-            this, &Widget::onCameraSelected);
-    // dialog->exec();
-}
-//启动摄像头
-void Widget::startCamera(const QCameraInfo &cameraInfo)
-{
-    camera = new QCamera(cameraInfo);
-    camera->setViewfinder(viewfinder);
-
-    camera->start();
-    if (camera) {
-        camera->stop();
-        camera->deleteLater();  // 使用 deleteLater() 而不是 delete
-    }
-    if (!timer->isActive()) {
-        timer->start(30);
-    }
-}
-void Widget::imageCaptured(int id, const QImage& preview)
-{
-    // 处理捕获的图像，id 是摄像头的索引
-    cv::Mat frame = QImageToMat(preview);
-
-    if (!frame.empty()) {
-        cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
-        QImage qtImage(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
-
+        // 将 QImage 转换为 QPixmap
+        QPixmap pixmap = QPixmap::fromImage(qtImage).scaled(labels[index]->size(), Qt::KeepAspectRatio, Qt::FastTransformation);;
         // 在对应的标签上显示图像
-        labels[id]->setPixmap(QPixmap::fromImage(qtImage).scaled(labels[id]->size(), Qt::KeepAspectRatio));
+        labels[index]->setPixmap(pixmap);
     }
 }
 cv::Mat Widget::QImageToMat(const QImage &image)
@@ -248,4 +174,50 @@ cv::Mat Widget::QImageToMat(const QImage &image)
         qWarning() << "QImageTomat们没有支持格式";
         return cv::Mat();
     }
+}
+//打开摄像头
+void Widget::on_open_clicked()
+{
+    if (!cameras.isEmpty()) {
+        for (int i = 0; i < cameraList.size(); ++i) {
+            // 启动摄像头
+            cameraList[i]->start();
+        }
+        ui->open->setText("关闭摄像头");
+        for (int i = 0; i < mediaRecorderList.size(); ++i) {
+            mediaRecorderList[i]->record();
+        }
+
+        timer->start(30); // 每30毫秒更新一帧
+    }
+    else {
+        // 关闭摄像头
+        for (int i = 0; i < mediaRecorderList.size(); ++i) {
+            mediaRecorderList[i]->stop();
+        }
+        for (int i = 0; i < cameraList.size(); ++i) {
+            cameraList[i]->stop();
+            imageCaptureList[i]->deleteLater();
+            cameraList[i]->deleteLater();
+            disconnect(imageCaptureList[i], SIGNAL(imageCaptured(int, QImage)),
+                       this, SLOT(imageCaptured(int, QImage)));
+        }
+        timer->stop();
+        // 清理列表
+        cameras.clear();
+        cameraList.clear();
+        viewfinderList.clear();
+        imageCaptureList.clear();
+        cameraOpened = false;
+        ui->open->setText("打开摄像头");
+    }
+}
+void Widget::localTime()
+{
+    QString tm = QTime::currentTime().toString("hh:mm:ss");
+    ui->labell->setText(tm);
+    ui->labell->setStyleSheet("color:red;\
+                              font-size:26px;\
+            background-color: rgb(85, 255, 255);\
+    border-radius: 15px;");
 }
